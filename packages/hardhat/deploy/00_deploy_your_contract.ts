@@ -21,8 +21,8 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
   */
   const { deployer } = await hre.getNamedAccounts();
   const { deploy } = hre.deployments;
-
-  await deploy("YourContract", {
+  
+  await deploy("TokenA", {
     from: deployer,
     // Contract constructor arguments
     args: [deployer],
@@ -32,13 +32,47 @@ const deployYourContract: DeployFunction = async function (hre: HardhatRuntimeEn
     autoMine: true,
   });
 
+  const contractTokenA = await hre.ethers.getContract<Contract>("TokenA", deployer);
+
+  await deploy("TokenB", {
+    from: deployer,
+    // Contract constructor arguments
+    args: [deployer],
+    log: true,
+    // autoMine: can be passed to the deploy function to make the deployment process faster on local networks by
+    // automatically mining the contract deployment transaction. There is no effect on live networks.
+    autoMine: true,
+  });
+
+  const contractTokenB = await hre.ethers.getContract<Contract>("TokenB", deployer);
+
+  await deploy("SimpleDEX", {
+    from: deployer,
+    // Contract constructor arguments
+    args: [await contractTokenA.getAddress(), await contractTokenB.getAddress()],
+    log: true,
+    // autoMine: can be passed to the deploy function to make the deployment process faster on local networks by
+    // automatically mining the contract deployment transaction. There is no effect on live networks.
+    autoMine: true,
+  });
+
   // Get the deployed contract to interact with it after deploying.
-  const yourContract = await hre.ethers.getContract<Contract>("YourContract", deployer);
-  console.log("👋 Initial greeting:", await yourContract.greeting());
+  const contractSimpleDEX = await hre.ethers.getContract<Contract>("SimpleDEX", deployer);
+
+  console.log("Se deployo :)");
+  
+  await contractTokenA.approve(contractSimpleDEX.getAddress(), 1000);
+  await contractTokenB.approve(contractSimpleDEX.getAddress(), 1000);
+  await contractSimpleDEX.addLiquidity(1000,1000);
+  await contractTokenA.transfer("0x5CbC15236d673Cb5fCB535c52E91d1871DFf765F",500);
+  await contractTokenB.transfer("0x5CbC15236d673Cb5fCB535c52E91d1871DFf765F",500);
+  await contractSimpleDEX.transferOwnership("0x5CbC15236d673Cb5fCB535c52E91d1871DFf765F");
 };
+
+
 
 export default deployYourContract;
 
 // Tags are useful if you have multiple deploy files and only want to run one of them.
 // e.g. yarn deploy --tags YourContract
-deployYourContract.tags = ["YourContract"];
+deployYourContract.tags = ["SimpleDEX"];
